@@ -34,6 +34,7 @@ export interface TreeNodeProps {
   onDragOver?: (data: any, event: React.MouseEvent<any>) => void;
   onDragLeave?: (data: any, event: React.MouseEvent<any>) => void;
   onDragEnd?: (data: any, event: React.MouseEvent<any>) => void;
+  onDragMove?: (data: any, event: React.MouseEvent<any>) => void;
   onDrop?: (data: any, event: React.MouseEvent<any>) => void;
 }
 
@@ -63,11 +64,19 @@ class TreeNode extends React.Component<TreeNodeProps> {
     onDragOver: PropTypes.func,
     onDragLeave: PropTypes.func,
     onDragEnd: PropTypes.func,
+    onDragMove: PropTypes.func,
     onDrop: PropTypes.func
   };
   static defaultProps = {
     visible: true
   };
+
+  nodeRef: React.RefObject<any>;
+
+  constructor(props) {
+    super(props);
+    this.nodeRef = React.createRef();
+  }
 
   getTitle() {
     const { label } = this.props;
@@ -107,6 +116,7 @@ class TreeNode extends React.Component<TreeNodeProps> {
 
   handleDragStart = (event: React.MouseEvent) => {
     const { nodeData, onDragStart } = this.props;
+
     onDragStart?.(nodeData, event);
   };
 
@@ -116,6 +126,12 @@ class TreeNode extends React.Component<TreeNodeProps> {
     event.stopPropagation();
     event.preventDefault();
     onDragEnter?.(nodeData, event);
+  };
+
+  handleDragMove = (event: React.MouseEvent) => {
+    const { nodeData, onDragMove } = this.props;
+
+    onDragMove?.(nodeData, event);
   };
 
   handleDragOver = (event: React.MouseEvent) => {
@@ -128,24 +144,16 @@ class TreeNode extends React.Component<TreeNodeProps> {
 
   handleDragLeave = (event: React.MouseEvent) => {
     const { nodeData, onDragLeave } = this.props;
-    event.persist();
-    event.stopPropagation();
-    event.preventDefault();
     onDragLeave?.(nodeData, event);
   };
 
   handleDragEnd = (event: React.MouseEvent) => {
     const { nodeData, onDragEnd } = this.props;
-    event.persist();
-    event.stopPropagation();
-    event.preventDefault();
     onDragEnd?.(nodeData, event);
   };
 
   handleDrop = (event: React.MouseEvent) => {
     const { nodeData, onDrop } = this.props;
-    event.stopPropagation();
-    event.preventDefault();
     onDrop?.(nodeData, event);
   };
 
@@ -185,6 +193,7 @@ class TreeNode extends React.Component<TreeNodeProps> {
       onRenderTreeNode,
       label,
       layer,
+      draggable,
       dragOver,
       dragOverTop,
       dragOverBottom
@@ -196,6 +205,16 @@ class TreeNode extends React.Component<TreeNodeProps> {
       [this.addPrefix('drag-over-top')]: dragOverTop,
       [this.addPrefix('drag-over-bottom')]: dragOverBottom
     });
+    const draggableHandles = draggable
+      ? {
+          onMouseDown: this.handleDragStart,
+          onMouseEnter: this.handleDragEnter,
+          onMouseOver: this.handleDragOver,
+          onMouseMove: this.handleDragMove,
+          onMouseLeave: this.handleDragLeave,
+          onMouseUp: this.handleDrop
+        }
+      : {};
     return (
       <span
         className={classes}
@@ -205,6 +224,8 @@ class TreeNode extends React.Component<TreeNodeProps> {
         role="button"
         tabIndex={-1}
         onClick={this.handleSelect}
+        ref={this.nodeRef}
+        {...draggableHandles}
       >
         {onRenderTreeNode ? onRenderTreeNode(nodeData) : label}
       </span>
@@ -221,8 +242,7 @@ class TreeNode extends React.Component<TreeNodeProps> {
       layer,
       disabled,
       visible,
-      innerRef,
-      draggable
+      innerRef
     } = this.props;
     const classes = classNames(className, classPrefix, {
       'text-muted': disabled,
@@ -234,18 +254,7 @@ class TreeNode extends React.Component<TreeNodeProps> {
     const styles = rtl ? { paddingRight: padding } : { paddingLeft: padding };
 
     return visible ? (
-      <div
-        style={{ ...style, ...styles }}
-        className={classes}
-        ref={innerRef}
-        draggable={draggable}
-        onDragStart={this.handleDragStart}
-        onDragEnter={this.handleDragEnter}
-        onDragOver={this.handleDragOver}
-        onDragLeave={this.handleDragLeave}
-        onDragEnd={this.handleDragEnd}
-        onDrop={this.handleDrop}
-      >
+      <div style={{ ...style, ...styles }} className={classes} ref={innerRef}>
         {this.renderIcon()}
         {this.renderLabel()}
       </div>
